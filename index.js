@@ -1,33 +1,48 @@
 const { createServer } = require('https');
 const { readFileSync } = require('fs');
 const express = require('express');
+const helmet = require('helmet');
 const multer = require('multer');
-const bodyParser = require('body-parser');
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
 
 // SETUP APP
 const app = express();
 
-app.use(bodyParser.urlencoded({extended:false}));
-app.use(bodyParser.json());
 app.use('/', express.static(__dirname + '/'));
 
-const maxFileSize = 4194304
-
+const maxFileSize = 4194304 // Taille du fichier en octets
+app.use(cookieParser());
+app.use(csrf({cookie: true, httpOnly: true}));
+app.use(
+    helmet.contentSecurityPolicy({
+        directives: {
+            defaultSrc: ["'self'"],
+            imgSrc: ['*'],
+            upgradeInsecureRequests: true,
+        },
+    })
+);
+app.use(helmet.frameguard({ action: 'deny' }));
+app.use(helmet.noSniff());
+app.use(
+    helmet.hsts({ maxAge: 31536000, includeSubDomains: true, preload: true })
+);
+app.use(helmet.ieNoOpen());
+app.use(helmet.referrerPolicy({ policy: 'no-referrer' }));
 //MULTER CONFIG: to get file photos to temp server storage
-const multerConfig = {
+const multerConfig = multer({
 
     //specify diskStorage (another option is memory)
     storage: multer.diskStorage({
 
         //specify destination
-        destination: function(req, file, next){
+        destination: function (req, file, next) {
             next(null, './uploads');
         },
 
         //specify the filename to be unique
-        filename: function(req, file, next){
+        filename: function (req, file, next) {
             console.log(file);
             //get the file mimetype ie 'image/jpeg' split and prefer the second value ie'jpeg'
             //const ext = file.mimetype.split('/')[1];
@@ -35,11 +50,11 @@ const multerConfig = {
             next(null, file.fieldname + '-' + Date.now() + getExtension(file))
         }
     }),
-    limits: { fileSize: maxFileSize, files: 1 },
+    limits: {fileSize: maxFileSize, files: 1},
 
     // filter out and prevent non-image files.
-    fileFilter: function(req, file, next){
-        if(!file){
+    fileFilter: function (req, file, next) {
+        if (!file) {
             next();
         }
 
@@ -56,7 +71,9 @@ const multerConfig = {
             return next();
         }
     }
-};
+});
+
+app.use(multerConfig.single('photo'))
 
 function getExtension(file) {
     // this function gets the filename extension by determining mimetype. To be exanded to support others, for example .jpeg or .tiff
@@ -67,26 +84,27 @@ function getExtension(file) {
     return res;
 }
 
-
 /* ROUTES
 **********/
-app.get('/', function(req, res){
-    res.send(`
-        <form action="/upload" enctype="multipart/form-data" method="POST">
-            <div class="inner-wrap">
-            <label><input type="file" id="photo" name="photo" /></label>
-            <div class="button-section">
-            <input type="submit" name="Upload" value="Upload Photo"/>
-            </div>
-            </div>
-            </div>
-        </form>`)
+app.get('/', function (req, res) {
+    res.send(` 
+    <form action="/upload?_csrf=${ req.csrfToken() }" enctype="multipart/form-data" method="POST">
+        <div class="inner-wrap">
+        <label><input type="file" id="photo" name="photo" /></label>
+        <div class="button-section">
+        <input type="submit" name="Upload" value="Upload Photo"/>
+        </div>
+        </div>
+        </div>
+    </form>
+    `
+    )
 });
 
-app.post('/upload', multer(multerConfig).single('photo'),function(req, res){
+app.post('/upload', function (req, res) {
+    //fs.chmodSync(`./uploads/${filename}`, '666')
     res.redirect('/')
-}
-
+    }
 );
 
 createServer(
@@ -95,4 +113,4 @@ createServer(
         cert: readFileSync(process.env.SSL_CERT),
     },
     app
-).listen(process.env.PORT);
+).listen(process.env.PORT)
