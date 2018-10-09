@@ -17,6 +17,10 @@
   },
   "homepage": "https://github.com/valentin-chevreau/mds-websecu-project#readme",
   "dependencies": {
-    "express": "^4.16.3"
+    "body-parser": "^1.18.3",
+    "cookie-parser": "^1.4.3",
+    "csurf": "^1.9.0",
+    "express": "^4.16.3",
+    "multer": "^1.4.0"
   }
 }
