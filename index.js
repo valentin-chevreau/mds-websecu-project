@@ -1,5 +1,5 @@
 const { createServer } = require('https');
-const { readFileSync } = require('fs');
+const { readFileSync, chmodSync } = require('fs');
 const express = require('express');
 const helmet = require('helmet');
 const multer = require('multer');
@@ -102,7 +102,7 @@ app.get('/', function (req, res) {
 });
 
 app.post('/upload', function (req, res) {
-    //fs.chmodSync(`./uploads/${filename}`, '666')
+    chmodSync(`./uploads/${req.file.filename}`, '666')
     res.redirect('/')
     }
 );
