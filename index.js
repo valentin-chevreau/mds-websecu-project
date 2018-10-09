@@ -8,6 +8,26 @@ const cookieParser = require('cookie-parser');
 
 // SETUP APP
 const app = express();
+const basicAuth = require('basic-auth');
+
+const auth = function (req, res, next) {
+    const user = basicAuth(req);
+    if (!user || !user.name || !user.pass) {
+        console.log(process.env.USER);
+        console.log(process.env.PASS);
+        res.set('WWW-Authenticate', 'Basic realm=Authorization Required');
+        res.sendStatus(401);
+        return;
+    }
+    if (user.name === process.env.USER && user.pass === process.env.PASS) {
+        next();
+    } else {
+        res.set('WWW-Authenticate', 'Basic realm=Authorization Required');
+        res.sendStatus(401);
+        return;
+    }
+}
+
 
 app.use('/', express.static(__dirname + '/'));
 
@@ -18,7 +38,6 @@ app.use(
     helmet.contentSecurityPolicy({
         directives: {
             defaultSrc: ["'self'"],
-            imgSrc: ['*'],
             upgradeInsecureRequests: true,
         },
     })
@@ -47,8 +66,15 @@ const multerConfig = multer({
             //get the file mimetype ie 'image/jpeg' split and prefer the second value ie'jpeg'
             //const ext = file.mimetype.split('/')[1];
             //set the file fieldname to a unique name containing the original name, current datetime and the extension.
+            let nameFile = file.fieldname + '-' + Date.now() + getExtension(file)
+            let picture = []
+            console.log('picture ', picture)
+            picture = picture.push(nameFile)
+            return picture
+            console.log('pictures=', picture)
             next(null, file.fieldname + '-' + Date.now() + getExtension(file))
         }
+
     }),
     limits: {fileSize: maxFileSize, files: 1},
 
@@ -62,7 +88,7 @@ const multerConfig = multer({
         const image = file.mimetype.startsWith('image/');
 
         if (image) {
-            console.log('photo uploaded');
+            console.log('photo uploaded')
             next(null, true);
         }
         else {
@@ -87,7 +113,7 @@ function getExtension(file) {
 /* ROUTES
 **********/
 app.get('/', function (req, res) {
-    res.send(` 
+    res.send(`
     <form action="/upload?_csrf=${ req.csrfToken() }" enctype="multipart/form-data" method="POST">
         <div class="inner-wrap">
         <label><input type="file" id="photo" name="photo" /></label>
@@ -99,13 +125,24 @@ app.get('/', function (req, res) {
     </form>
     `
     )
+
 });
 
 app.post('/upload', function (req, res) {
-    chmodSync(`./uploads/${req.file.filename}`, '666')
-    res.redirect('/')
+        chmodSync(`./uploads/${req.file.filename}`, '666')
+        res.redirect('/')
     }
 );
+
+app.get("/images", auth, function (req, res) {
+    console.log('images', req.file.pictures)
+    res.send('This page is authenticated!' + ' ' + images.forEach(function(item, index, array) { +
+        `<li>console.log(`
+        uploads/
+        `item, index)</li>`
+    })
+    )
+});
 
 createServer(
     {

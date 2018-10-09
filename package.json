@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/valentin-chevreau/mds-websecu-project#readme",
   "dependencies": {
+    "basic-auth": "^2.0.1",
     "body-parser": "^1.18.3",
     "cookie-parser": "^1.4.3",
     "csurf": "^1.9.0",
